@@ -1,0 +1,4 @@
+/target
+server.toml
+/dist
+.DS_Store

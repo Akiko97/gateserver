@@ -1,0 +1,22 @@
+{
+  "server": {
+    "host": "localhost",
+    "port": 8888
+  },
+  "web": {
+    "path": "/",
+    "dist_path": "dist"
+  },
+  "websocket_proxy": {
+    "path": "/ws",
+    "forward_to": "ws://127.0.0.1:8000/ws"
+  },
+  "tcp_proxy": {
+    "path": "/tcp",
+    "forward_to": "127.0.0.1:8000"
+  },
+  "reverse_proxy": {
+    "path": "/proxy",
+    "forward_to": "http://localhost:5173"
+  }
+}
