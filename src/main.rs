@@ -29,8 +29,8 @@ pub struct ServerContext {
 #[tokio::main]
 async fn main() -> Result<()> {
     // init
-    utils::banner();
     utils::init_tracing();
+    utils::banner();
     config::init_config();
     let span = tracing::span!(Level::DEBUG, "main");
     let _ = span.enter();

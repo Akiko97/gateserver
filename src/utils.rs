@@ -19,6 +19,8 @@ M. .MMM'  M 88.  ... 88       88 .88'  88.  ... 88
 Mb.     .dM `88888P' dP       8888P'   `88888P' dP
 MMMMMMMMMMM
     "#);
+    tracing::info!("Author: {}", env!("CARGO_PKG_AUTHORS"));
+    tracing::info!("Current version: {}", env!("CARGO_PKG_VERSION"));
 }
 
 pub fn init_tracing() {
