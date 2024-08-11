@@ -3,7 +3,7 @@ mod config;
 mod services;
 
 use std::sync::Arc;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use tracing::Level;
 use axum::{
     Router,
@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
         if let Ok((stream, _)) = connect_async(config.forward_to.as_str()).await {
             Some(Arc::new(Mutex::new(stream)))
         } else {
-            tracing::error!("Failed to connect with websocket server, websocket proxy not working");
+            tracing::error!("Failed to connect with Websocket server, Websocket proxy not working");
             None
         }
     } else { None };
@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
         if let Ok(stream) = TcpStream::connect(config.forward_to.as_str()).await {
             Some(Arc::new(Mutex::new(stream)))
         } else {
-            tracing::error!("Failed to connect with tcp server, tcp proxy not working");
+            tracing::error!("Failed to connect with TCP server, TCP proxy not working");
             None
         }
     } else { None };
@@ -71,7 +71,15 @@ async fn main() -> Result<()> {
 
     // init server
     let addr = format!("0.0.0.0:{}", SERVER_CONFIG.server.port);
-    let server = TcpListener::bind(&addr).await?;
+    let server = match TcpListener::bind(&addr).await {
+        Ok(server) => server,
+        Err(err) => {
+            let error_msg = format!("Failed to bind TCP listener: {}", err);
+            tracing::error!("{error_msg}");
+            return Err(anyhow!("{error_msg}"));
+        }
+    };
+
     tracing::info!("Server is listening at {addr}");
     axum::serve(server, ServiceExt::<Request>::into_make_service(app)).await?;
 

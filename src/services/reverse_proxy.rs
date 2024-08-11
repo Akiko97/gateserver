@@ -22,8 +22,7 @@ pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
         };
         let get_file_path = get_file_path.as_str();
 
-        let forward_url = config.forward_to.as_str();
-        tracing::info!("Setting up route for reverse proxy service: forward to {forward_url}");
+        tracing::info!("Setting up route for Reverse proxy service");
         router
             .route(path, get(forward_to))
             .route(get_file_path, get(forward_to))

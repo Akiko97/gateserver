@@ -26,7 +26,7 @@ pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
         let get_file_path = format!("{get_file_path}*path");
         let get_file_path = get_file_path.as_str();
 
-        tracing::info!("Setting up route for web service");
+        tracing::info!("Setting up route for Web service");
         router
             .route(path, get(get_file))
             .route(get_file_path, get(get_file))
