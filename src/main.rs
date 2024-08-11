@@ -121,6 +121,8 @@ fn create_router(context: &ServerContext) -> Router<ServerContext> {
         router = services::reverse_proxy::setup_routes(router);
     }
     router = services::api::setup_routes(router);
-    router = services::web::setup_routes(router);
+    if SERVER_CONFIG.web.is_some() {
+        router = services::web::setup_routes(router);
+    }
     router
 }
