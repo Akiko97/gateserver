@@ -3,6 +3,7 @@ mod config;
 mod services;
 
 use std::sync::Arc;
+use std::time::Duration;
 use anyhow::{anyhow, Result};
 use tracing::Level;
 use axum::{
@@ -11,10 +12,7 @@ use axum::{
     body::Body,
     extract::Request
 };
-use tokio::{
-    sync::Mutex,
-    net::{TcpListener, TcpStream}
-};
+use tokio::{sync::Mutex, net::{TcpListener, TcpStream}, select};
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use tokio_tungstenite::{connect_async, WebSocketStream, MaybeTlsStream};
 use crate::config::SERVER_CONFIG;
@@ -39,20 +37,44 @@ async fn main() -> Result<()> {
 
     // init server context
     let ws_proxy = if let Some(config) = &SERVER_CONFIG.websocket_proxy {
-        if let Ok((stream, _)) = connect_async(config.forward_to.as_str()).await {
-            Some(Arc::new(Mutex::new(stream)))
-        } else {
-            tracing::error!("Failed to connect with Websocket server, Websocket proxy not working");
-            None
+        let mut ws_proxy = None;
+        for tried_num in 0..3 {
+            ws_proxy = select! {
+                Ok((stream, _)) = connect_async(config.forward_to.as_str()) => {
+                    Some(Arc::new(Mutex::new(stream)))
+                },
+                _ = tokio::time::sleep(Duration::from_millis(2000)) => {
+                    tracing::warn!("Failed to connect with Websocket server, remaining attempts: {}", 2 - tried_num);
+                    if tried_num < 2 { continue; }
+                    tracing::error!("Failed to connect with Websocket server, Websocket proxy not working");
+                    None
+                }
+            };
+            if ws_proxy.is_some() {
+                break;
+            }
         }
+        ws_proxy
     } else { None };
     let tcp_proxy = if let Some(config) = &SERVER_CONFIG.tcp_proxy {
-        if let Ok(stream) = TcpStream::connect(config.forward_to.as_str()).await {
-            Some(Arc::new(Mutex::new(stream)))
-        } else {
-            tracing::error!("Failed to connect with TCP server, TCP proxy not working");
-            None
+        let mut tcp_proxy = None;
+        for tried_num in 0..3 {
+            tcp_proxy = select! {
+                Ok(stream) = TcpStream::connect(config.forward_to.as_str()) => {
+                    Some(Arc::new(Mutex::new(stream)))
+                },
+                _ = tokio::time::sleep(Duration::from_millis(2000)) => {
+                    tracing::warn!("Failed to connect with TCP server, remaining attempts: {}", 2 - tried_num);
+                    if tried_num < 2 { continue; }
+                    tracing::error!("Failed to connect with TCP server, TCP proxy not working");
+                    None
+                }
+            };
+            if tcp_proxy.is_some() {
+                break;
+            }
         }
+        tcp_proxy
     } else { None };
     let reverse_proxy = if let Some(_) = &SERVER_CONFIG.reverse_proxy {
         let client: HttpClient = hyper_util::client::legacy::Client::<(), ()>::builder(TokioExecutor::new())
@@ -66,7 +88,7 @@ async fn main() -> Result<()> {
     };
 
     // init app
-    let app = create_router();
+    let app = create_router(&state);
     let app = app.with_state(state);
 
     // init server
@@ -86,12 +108,18 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn create_router() -> Router<ServerContext> {
+fn create_router(context: &ServerContext) -> Router<ServerContext> {
     let mut router = Router::new();
     // setup all routes
-    router = services::websocket_proxy::setup_routes(router);
-    router = services::tcp_proxy::setup_routes(router);
-    router = services::reverse_proxy::setup_routes(router);
+    if context.ws_proxy.is_some() {
+        router = services::websocket_proxy::setup_routes(router);
+    }
+    if context.tcp_proxy.is_some() {
+        router = services::tcp_proxy::setup_routes(router);
+    }
+    if context.reverse_proxy.is_some() {
+        router = services::reverse_proxy::setup_routes(router);
+    }
     router = services::api::setup_routes(router);
     router = services::web::setup_routes(router);
     router
