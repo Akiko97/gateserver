@@ -41,9 +41,9 @@ async fn forward_to(
         }
         // wait for response (timeout: 1s)
         select! {
-            result = ws.next() => {
+            Some(result) = ws.next() => {
                 match result {
-                    Some(Ok(msg)) => {
+                    Ok(msg) => {
                         match msg {
                             Message::Text(response_text) => {
                                 Ok(Response::builder()
@@ -60,11 +60,13 @@ async fn forward_to(
                                     .unwrap())
                             }
                             _ => {
+                                tracing::warn!("Received message is an unsupported WebSocket message type");
                                 Err(StatusCode::BAD_GATEWAY)
                             }
                         }
                     }
-                    Some(Err(_)) | None => {
+                    Err(err) => {
+                        tracing::error!("WebSocket Connection Error: {}", err);
                         Err(StatusCode::BAD_GATEWAY)
                     }
                 }

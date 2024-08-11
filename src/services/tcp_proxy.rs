@@ -51,12 +51,12 @@ async fn forward_to(
                             .body(msg.into())
                             .unwrap())
                     }
-                    Ok(_) => {
-                        // close
+                    Ok(n) => {
+                        tracing::error!("TCP Connection Error: received message include {} byte(s)", n);
                         Err(StatusCode::BAD_GATEWAY)
                     }
-                    Err(_) => {
-                        // error
+                    Err(err) => {
+                        tracing::error!("TCP Connection Error: {}", err);
                         Err(StatusCode::BAD_GATEWAY)
                     }
                 }
