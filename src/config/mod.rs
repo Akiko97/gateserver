@@ -2,6 +2,7 @@ mod server_config;
 
 use lazy_static::lazy_static;
 pub use server_config::ServerConfig;
+pub use server_config::ProxyConfig;
 
 const DEFAULT_CONFIG: &str = include_str!("./server.json");
 

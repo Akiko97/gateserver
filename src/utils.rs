@@ -1,6 +1,17 @@
-use axum::extract::Request;
-use axum::http::StatusCode;
+use std::sync::Arc;
+use std::time::Duration;
+use axum::{
+    extract::Request,
+    http::StatusCode
+};
+use tokio::{
+    net::TcpStream,
+    sync::Mutex,
+    select
+};
 use http_body_util::BodyExt;
+use tokio_tungstenite::{connect_async, WebSocketStream, MaybeTlsStream};
+use crate::config::ProxyConfig;
 
 pub fn banner() {
     println!(r#"
@@ -38,4 +49,52 @@ pub async fn get_body_from_request(mut req: Request) -> Result<Vec<u8>, StatusCo
         } else { return Err(StatusCode::BAD_REQUEST); }
     }
     Ok(body_bytes)
+}
+
+pub async fn make_websocket_stream(config: &ProxyConfig) -> Option<Arc<Mutex<WebSocketStream<MaybeTlsStream<TcpStream>>>>> {
+    let mut ws_proxy = None;
+    for tried_num in 0..3 {
+        ws_proxy = select! {
+                Ok((stream, _)) = connect_async(config.forward_to.as_str()) => {
+                    Some(Arc::new(Mutex::new(stream)))
+                },
+                _ = tokio::time::sleep(Duration::from_millis(2000)) => {
+                    tracing::warn!("Failed to connect with Websocket server '{}', remaining attempts: {}",
+                        config.forward_to,
+                        2 - tried_num);
+                    if tried_num < 2 { continue; }
+                    tracing::error!("Failed to connect with Websocket server '{}', Websocket proxy not working",
+                        config.forward_to);
+                    None
+                }
+            };
+        if ws_proxy.is_some() {
+            break;
+        }
+    }
+    ws_proxy
+}
+
+pub async fn make_tcp_stream(config: &ProxyConfig) -> Option<Arc<Mutex<TcpStream>>> {
+    let mut tcp_proxy = None;
+    for tried_num in 0..3 {
+        tcp_proxy = select! {
+                Ok(stream) = TcpStream::connect(config.forward_to.as_str()) => {
+                    Some(Arc::new(Mutex::new(stream)))
+                },
+                _ = tokio::time::sleep(Duration::from_millis(2000)) => {
+                    tracing::warn!("Failed to connect with TCP server '{}', remaining attempts: {}",
+                        config.forward_to,
+                        2 - tried_num);
+                    if tried_num < 2 { continue; }
+                    tracing::error!("Failed to connect with TCP server '{}', TCP proxy not working",
+                        config.forward_to);
+                    None
+                }
+            };
+        if tcp_proxy.is_some() {
+            break;
+        }
+    }
+    tcp_proxy
 }
