@@ -124,5 +124,5 @@ fn create_router(context: &ServerContext) -> Router<ServerContext> {
     if SERVER_CONFIG.web.is_some() {
         router = services::web::setup_routes(router);
     }
-    router
+    services::default::setup_routes(router)
 }
