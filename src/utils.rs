@@ -98,3 +98,16 @@ pub async fn make_tcp_stream(config: &ProxyConfig) -> Option<Arc<Mutex<TcpStream
     }
     tcp_proxy
 }
+
+pub fn debug_print_bytes(bytes: &Vec<u8>, source: &str) {
+    if let Ok(msg) = String::from_utf8(bytes.clone()) {
+        tracing::debug!("Received message from {} ({} bytes): {}",
+            source,
+            bytes.len(),
+            msg);
+    } else {
+        tracing::debug!("Received message from {}({} bytes): <ERROR IN STRINGIFY>",
+            source,
+            bytes.len());
+    }
+}

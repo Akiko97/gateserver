@@ -12,7 +12,7 @@ use crate::{
     ServerContext,
     config::SERVER_CONFIG
 };
-use crate::utils::get_body_from_request;
+use crate::utils::{get_body_from_request, debug_print_bytes};
 
 pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
     if let Some(config) = &SERVER_CONFIG.tcp_proxy {
@@ -34,17 +34,19 @@ async fn forward_to(
         let mut tcp = tcp.lock().await;
         // send request to server
         let body_bytes = get_body_from_request(req).await?;
+        debug_print_bytes(&body_bytes, "HTTP");
         if let Err(_) = tcp.write_all(body_bytes.as_slice()).await {
             return Err(StatusCode::BAD_GATEWAY);
         }
         // wait for response (timeout: 1s)
-        let mut buffer = vec![0; 1024];
+        let mut buffer = vec![0; 4096];
         select! {
             result = tcp.read(&mut buffer) => {
                 match result {
                     Ok(n) if n > 0 => {
                         let msg = &buffer[..n];
                         let msg = msg.to_vec();
+                        debug_print_bytes(&msg, "HTTP");
                         Ok(Response::builder()
                             .status(StatusCode::OK)
                             .header("Content-Type", "application/json")

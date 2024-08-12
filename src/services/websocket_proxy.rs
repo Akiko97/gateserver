@@ -13,7 +13,7 @@ use crate::{
     ServerContext,
     config::SERVER_CONFIG
 };
-use crate::utils::get_body_from_request;
+use crate::utils::{get_body_from_request, debug_print_bytes};
 
 pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
     if let Some(config) = &SERVER_CONFIG.websocket_proxy {
@@ -35,6 +35,7 @@ async fn forward_to(
         let mut ws = ws.lock().await;
         // send request to server
         let body_bytes = get_body_from_request(req).await?;
+        debug_print_bytes(&body_bytes, "HTTP");
         let request_message = Message::Binary(body_bytes);
         if let Err(_) = ws.send(request_message).await {
             return Err(StatusCode::BAD_GATEWAY);
@@ -46,6 +47,8 @@ async fn forward_to(
                     Ok(msg) => {
                         match msg {
                             Message::Text(response_text) => {
+                                let response_text_bin = response_text.clone().into_bytes();
+                                debug_print_bytes(&response_text_bin, "Websocket");
                                 Ok(Response::builder()
                                     .status(StatusCode::OK)
                                     .header("Content-Type", "application/json")
@@ -53,6 +56,7 @@ async fn forward_to(
                                     .unwrap())
                             }
                             Message::Binary(response_binary) => {
+                                debug_print_bytes(&response_binary, "Websocket");
                                 Ok(Response::builder()
                                     .status(StatusCode::OK)
                                     .header("Content-Type", "application/json")
