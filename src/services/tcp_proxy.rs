@@ -48,7 +48,7 @@ async fn forward_to(
                     Ok(n) if n > 0 => {
                         let msg = &buffer[..n];
                         let msg = msg.to_vec();
-                        debug_print_bytes(&msg, "HTTP");
+                        debug_print_bytes(&msg, "TCP");
                         Ok(Response::builder()
                             .status(StatusCode::OK)
                             .header("Content-Type", "application/json")
