@@ -10,6 +10,7 @@ pub struct BaseConfig {
 pub struct WebConfig {
     pub path: String,
     pub dist_path: String,
+    pub spa_support: bool,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

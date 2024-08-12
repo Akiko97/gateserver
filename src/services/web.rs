@@ -47,9 +47,9 @@ async fn get_file(
     State(_): State<ServerContext>,
     uri: Uri,
 ) -> Result<Response, StatusCode> {
-    let (web_path, dist_path) = if let Some(config) = &SERVER_CONFIG.web {
-        (config.path.as_str(), config.dist_path.as_str())
-    } else { ("", "") };
+    let (web_path, dist_path, spa_support) = if let Some(config) = &SERVER_CONFIG.web {
+        (config.path.as_str(), config.dist_path.as_str(), config.spa_support)
+    } else { ("", "", false) };
     let path = uri.path()
         .trim_start_matches(web_path)
         .trim_start_matches("/")
@@ -63,7 +63,7 @@ async fn get_file(
         // file, access an exist file
         _ if is_file_exist(file_path) => serve_file_by_path(file_path).await,
         // not a file, SPA route
-        _ if is_virtual_route(path_str) => serve_file_by_path(format!("{dist_path}/index.html").as_str()).await,
+        _ if is_virtual_route(path_str) && spa_support => serve_file_by_path(format!("{dist_path}/index.html").as_str()).await,
         // 404
         _ => {
             tracing::error!("Not found file {}", file_path);

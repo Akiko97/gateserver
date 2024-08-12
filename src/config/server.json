@@ -5,7 +5,8 @@
   },
   "web": {
     "path": "/",
-    "dist_path": "dist"
+    "dist_path": "dist",
+    "spa_support": true
   },
   "websocket_proxy": {
     "path": "/ws",
