@@ -25,6 +25,7 @@ port = 8888 # The port number on which the server listens.
 [web]
 path = "/" # The URL path at which to serve the static files.
 dist_path = "dist" # The directory containing the static files.
+spa_support = true # The option indicates whether the server supports SPA.
 
 [websocket_proxy]
 path = "/ws" # The URL path for the WebSocket proxy.
