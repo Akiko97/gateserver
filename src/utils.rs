@@ -51,11 +51,21 @@ pub async fn get_body_from_request(mut req: Request) -> Result<Vec<u8>, StatusCo
     Ok(body_bytes)
 }
 
+async fn create_websocket_stream(uri: String) -> Option<WebSocketStream<MaybeTlsStream<TcpStream>>> {
+    match connect_async(uri.as_str()).await {
+        Ok((stream, _)) => Some(stream),
+        Err(err) => {
+            tracing::debug!("Creating Websocket connection error: {}", err);
+            None
+        }
+    }
+}
+
 pub async fn make_websocket_stream(config: &ProxyConfig) -> Option<Arc<Mutex<WebSocketStream<MaybeTlsStream<TcpStream>>>>> {
     let mut ws_proxy = None;
     for tried_num in 0..3 {
         ws_proxy = select! {
-                Ok((stream, _)) = connect_async(config.forward_to.as_str()) => {
+                Some(stream) = create_websocket_stream(config.forward_to.clone()) => {
                     Some(Arc::new(Mutex::new(stream)))
                 },
                 _ = tokio::time::sleep(Duration::from_millis(2000)) => {
@@ -75,11 +85,21 @@ pub async fn make_websocket_stream(config: &ProxyConfig) -> Option<Arc<Mutex<Web
     ws_proxy
 }
 
+async fn create_tcp_stream(uri: String) -> Option<TcpStream> {
+    match TcpStream::connect(uri.as_str()).await {
+        Ok(stream) => Some(stream),
+        Err(err) => {
+            tracing::debug!("Creating TCP connection error: {}", err);
+            None
+        }
+    }
+}
+
 pub async fn make_tcp_stream(config: &ProxyConfig) -> Option<Arc<Mutex<TcpStream>>> {
     let mut tcp_proxy = None;
     for tried_num in 0..3 {
         tcp_proxy = select! {
-                Ok(stream) = TcpStream::connect(config.forward_to.as_str()) => {
+                Some(stream) = create_tcp_stream(config.forward_to.clone()) => {
                     Some(Arc::new(Mutex::new(stream)))
                 },
                 _ = tokio::time::sleep(Duration::from_millis(2000)) => {

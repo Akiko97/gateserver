@@ -14,7 +14,7 @@
   },
   "tcp_proxy": {
     "path": "/tcp",
-    "forward_to": "127.0.0.1:8000"
+    "forward_to": "127.0.0.1:8080"
   },
   "reverse_proxy": {
     "path": "/proxy",
