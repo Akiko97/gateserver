@@ -51,7 +51,7 @@ pub async fn get_body_from_request(mut req: Request) -> Result<Vec<u8>, StatusCo
     Ok(body_bytes)
 }
 
-async fn create_websocket_stream(uri: String) -> Option<WebSocketStream<MaybeTlsStream<TcpStream>>> {
+pub async fn create_websocket_stream(uri: String) -> Option<WebSocketStream<MaybeTlsStream<TcpStream>>> {
     match connect_async(uri.as_str()).await {
         Ok((stream, _)) => Some(stream),
         Err(err) => {
@@ -85,7 +85,7 @@ pub async fn make_websocket_stream(config: &ProxyConfig) -> Option<Arc<Mutex<Web
     ws_proxy
 }
 
-async fn create_tcp_stream(uri: String) -> Option<TcpStream> {
+pub async fn create_tcp_stream(uri: String) -> Option<TcpStream> {
     match TcpStream::connect(uri.as_str()).await {
         Ok(stream) => Some(stream),
         Err(err) => {
