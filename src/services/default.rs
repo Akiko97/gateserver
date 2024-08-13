@@ -7,6 +7,8 @@ use axum::{
 };
 use crate::ServerContext;
 
+const NOT_FOUND: &str = include_str!("./not_found.html");
+
 pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
     router.fallback(handle_default)
 }
@@ -16,6 +18,6 @@ async fn handle_default(uri: Uri) -> impl IntoResponse {
     tracing::warn!("{}", message);
     Response::builder()
         .status(StatusCode::NOT_FOUND)
-        .body(Body::from(message))
+        .body(Body::from(NOT_FOUND.replace("%MESSAGE%", message.as_str())))
         .unwrap()
 }
