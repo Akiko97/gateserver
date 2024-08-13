@@ -39,7 +39,8 @@ async fn forward_to(
         let body_bytes = get_body_from_request(req).await?;
         debug_print_bytes(&body_bytes, "HTTP");
         let request_message = Message::Binary(body_bytes);
-        if let Err(_) = ws.send(request_message).await {
+        if let Err(err) = ws.send(request_message).await {
+            tracing::error!("Sending HTTP request to Websocket proxy error: {}", err);
             return Err(StatusCode::BAD_GATEWAY);
         }
         // wait for response (timeout: 1s)

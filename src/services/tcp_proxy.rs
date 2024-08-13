@@ -37,7 +37,8 @@ async fn forward_to(
         // send request to server
         let body_bytes = get_body_from_request(req).await?;
         debug_print_bytes(&body_bytes, "HTTP");
-        if let Err(_) = tcp.write_all(body_bytes.as_slice()).await {
+        if let Err(err) = tcp.write_all(body_bytes.as_slice()).await {
+            tracing::error!("Sending HTTP request to TCP proxy error: {}", err);
             return Err(StatusCode::BAD_GATEWAY);
         }
         // wait for response (timeout: 1s)
