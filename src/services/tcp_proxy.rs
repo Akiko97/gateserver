@@ -14,7 +14,7 @@ use crate::{
     ServerContext,
     config::SERVER_CONFIG
 };
-use crate::utils::{get_body_from_request, debug_print_bytes};
+use crate::utils::{get_body_from_request, debug_print_bytes, make_tcp_stream};
 
 pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
     if let Some(config) = &SERVER_CONFIG.tcp_proxy {
@@ -29,16 +29,42 @@ pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
 }
 
 async fn forward_to(
-    State(context): State<ServerContext>,
+    State(mut context): State<ServerContext>,
     req: Request,
 ) -> Result<Response, StatusCode> {
+    if let Some(config) = &SERVER_CONFIG.tcp_proxy {
+        let body_bytes = get_body_from_request(req).await?;
+        debug_print_bytes(&body_bytes, "HTTP");
+        match handler(context.clone(), body_bytes.clone()).await {
+            Ok(response) => Ok(response),
+            Err(_) => {
+                tracing::warn!("Failure when connecting to TCP server, try to reconnect");
+                match make_tcp_stream(config).await {
+                    Some(new_tcp) => {
+                        context.tcp_proxy = Some(new_tcp);
+                        tracing::info!("Reconnected to TCP server");
+                        handler(context, body_bytes).await
+                    }
+                    None => {
+                        context.tcp_proxy = None;
+                        tracing::error!("Failed to reconnect to TCP server");
+                        Err(StatusCode::BAD_GATEWAY)
+                    }
+                }
+            }
+        }
+    } else {
+        tracing::error!("Access TCP proxy endpoint without setting up");
+        Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}
+
+async fn handler(context: ServerContext, body_bytes: Vec<u8>) -> Result<Response, StatusCode> {
     if let Some(tcp) = context.tcp_proxy {
         let mut tcp = tcp.lock().await;
         // send request to server
-        let body_bytes = get_body_from_request(req).await?;
-        debug_print_bytes(&body_bytes, "HTTP");
         if let Err(err) = tcp.write_all(body_bytes.as_slice()).await {
-            tracing::error!("Sending HTTP request to TCP proxy error: {}", err);
+            tracing::error!("Sending HTTP request to TCP server error: {}", err);
             return Err(StatusCode::BAD_GATEWAY);
         }
         // wait for response (timeout: 1s)
