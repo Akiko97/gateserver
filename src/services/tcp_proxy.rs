@@ -8,10 +8,10 @@ use axum::{
 use tokio::{
     select,
     time::Duration,
-    io::{AsyncReadExt, AsyncWriteExt}
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
+    sync::MutexGuard
 };
-use tokio::net::TcpStream;
-use tokio::sync::MutexGuard;
 use crate::{
     ServerContext,
     config::SERVER_CONFIG
@@ -40,7 +40,7 @@ async fn forward_to(
         let mut tcp = tcp.lock().await;
         match handler(&mut tcp, body_bytes.clone()).await {
             Ok(response) => Ok(response),
-            Err(_) => {
+            Err(err) if err == StatusCode::BAD_GATEWAY => {
                 tracing::warn!("Failure when connecting to TCP server, try to reconnect");
                 match create_tcp_stream(config.forward_to.clone()).await {
                     Some(new_tcp) => {
@@ -53,7 +53,8 @@ async fn forward_to(
                         Err(StatusCode::BAD_GATEWAY)
                     }
                 }
-            }
+            },
+            Err(err) => Err(err),
         }
     } else {
         tracing::error!("Access TCP proxy endpoint without setting up");
