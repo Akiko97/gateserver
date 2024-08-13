@@ -25,6 +25,7 @@ pub struct ServerContext {
     pub reverse_proxy: Option<HttpClient>,
 }
 
+// #[tokio::main(flavor = "multi_thread", worker_threads = 16)]
 #[tokio::main]
 async fn main() -> Result<()> {
     // init
