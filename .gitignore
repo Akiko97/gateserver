@@ -2,3 +2,4 @@
 server.toml
 /dist
 .DS_Store
+logs/
