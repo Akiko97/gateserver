@@ -69,3 +69,7 @@ Once the server is running, it will automatically generate the configuration fil
 ## License
 
 This project is licensed under the GNU Affero General Public License (AGPL). See the `LICENSE` file for details.
+
+## Third-Party Licenses
+
+This project uses third-party libraries. The licenses for these libraries can be found in the `LICENSES-THIRD-PARTY` file.
