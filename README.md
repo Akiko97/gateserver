@@ -21,6 +21,7 @@ Upon the first execution of the server, a configuration file is generated automa
 [server]
 host = "localhost" # The hostname or IP address on which the server listens.
 port = 8888 # The port number on which the server listens.
+file_log = true # Whether to write log to file.
 
 [web]
 path = "/" # The URL path at which to serve the static files.
