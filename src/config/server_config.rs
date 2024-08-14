@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct BaseConfig {
     pub host: String,
     pub port: u32,
+    pub file_log: bool,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

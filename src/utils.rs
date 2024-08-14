@@ -11,12 +11,12 @@ use tokio::{
 };
 use http_body_util::BodyExt;
 use tokio_tungstenite::{connect_async, WebSocketStream, MaybeTlsStream};
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::{
+    EnvFilter,
     layer::SubscriberExt,
     util::SubscriberInitExt
 };
-use crate::config::ProxyConfig;
+use crate::config::{ProxyConfig, SERVER_CONFIG};
 
 pub fn banner() {
     println!(r#"
@@ -42,6 +42,11 @@ MMMMMMMMMMM
     } else {
         tracing::info!("RUST_LOG is not set, use default `info`");
     }
+    tracing::info!("File log is {}", if SERVER_CONFIG.server.file_log {
+        "enabled"
+    } else {
+        "disabled"
+    });
 }
 
 pub fn init_tracing() {
@@ -61,11 +66,18 @@ pub fn init_tracing() {
         .with_target(true)
         .with_thread_names(true)
         .with_file(true);
-    tracing_subscriber::registry()
-        .with(console_log)
-        .with(file_log)
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {EnvFilter::from("info")}))
-        .init();
+    if SERVER_CONFIG.server.file_log {
+        tracing_subscriber::registry()
+            .with(console_log)
+            .with(file_log)
+            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {EnvFilter::from("info")}))
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(console_log)
+            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {EnvFilter::from("info")}))
+            .init();
+    }
     tokio::spawn(async {
         if let Err(err) = tokio::signal::ctrl_c().await {
             tracing::error!("Failed to listen for Ctrl+C, log files maybe incomplete: {}", err);
