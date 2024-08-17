@@ -56,7 +56,7 @@ cd gateserver
 cargo build --release
 ```
 
-### Clone the repository
+### Run the project
 
 ```shell
 cargo run --release
