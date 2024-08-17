@@ -38,7 +38,7 @@ async fn forward_to(
         let body_bytes = get_body_from_request(req).await?;
         debug_print_bytes(&body_bytes, "HTTP");
         let mut tcp = tcp.lock().await;
-        match handler(&mut tcp, body_bytes.clone()).await {
+        match handler(&mut tcp, body_bytes.clone(), config.timeout).await {
             Ok(response) => Ok(response),
             Err(err) if err == StatusCode::BAD_GATEWAY => {
                 tracing::warn!("Failure when connecting to TCP server, try to reconnect");
@@ -46,7 +46,7 @@ async fn forward_to(
                     Some(new_tcp) => {
                         *tcp = new_tcp;
                         tracing::info!("Reconnected to TCP server");
-                        handler(&mut tcp, body_bytes).await
+                        handler(&mut tcp, body_bytes, config.timeout).await
                     }
                     None => {
                         tracing::error!("Failed to reconnect to TCP server");
@@ -62,7 +62,7 @@ async fn forward_to(
     }
 }
 
-async fn handler(tcp: &mut MutexGuard<'_, TcpStream>, body_bytes: Vec<u8>) -> Result<Response, StatusCode> {
+async fn handler(tcp: &mut MutexGuard<'_, TcpStream>, body_bytes: Vec<u8>, timeout: u64) -> Result<Response, StatusCode> {
     // send request to server
     if let Err(err) = tcp.write_all(body_bytes.as_slice()).await {
         tracing::error!("Sending HTTP request to TCP server error: {}", err);
@@ -93,7 +93,7 @@ async fn handler(tcp: &mut MutexGuard<'_, TcpStream>, body_bytes: Vec<u8>) -> Re
                 }
             }
         }
-        _ = tokio::time::sleep(Duration::from_millis(1000)) => {
+        _ = tokio::time::sleep(Duration::from_millis(timeout)) => {
             tracing::warn!("TCP server timeout");
             Err(StatusCode::GATEWAY_TIMEOUT)
         }

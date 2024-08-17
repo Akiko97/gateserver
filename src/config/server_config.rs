@@ -5,6 +5,7 @@ pub struct BaseConfig {
     pub host: String,
     pub port: u32,
     pub file_log: bool,
+    pub log_level: String,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -18,6 +19,7 @@ pub struct WebConfig {
 pub struct ProxyConfig {
     pub path: String,
     pub forward_to: String,
+    pub timeout: u64,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

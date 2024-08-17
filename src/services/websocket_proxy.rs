@@ -39,7 +39,7 @@ async fn forward_to(
         let body_bytes = get_body_from_request(req).await?;
         debug_print_bytes(&body_bytes, "HTTP");
         let mut ws = ws.lock().await;
-        match handler(&mut ws, body_bytes.clone()).await {
+        match handler(&mut ws, body_bytes.clone(), config.timeout).await {
             Ok(response) => Ok(response),
             Err(err) if err == StatusCode::BAD_GATEWAY => {
                 tracing::warn!("Failure when connecting to Websocket server, try to reconnect");
@@ -47,7 +47,7 @@ async fn forward_to(
                     Some(new_ws) => {
                         *ws = new_ws;
                         tracing::info!("Reconnected to Websocket server");
-                        handler(&mut ws, body_bytes).await
+                        handler(&mut ws, body_bytes, config.timeout).await
                     },
                     None => {
                         tracing::error!("Failed to reconnect to Websocket server");
@@ -63,7 +63,7 @@ async fn forward_to(
     }
 }
 
-async fn handler(ws: &mut MutexGuard<'_, WebSocketStream<MaybeTlsStream<TcpStream>>>, body_bytes: Vec<u8>) -> Result<Response, StatusCode> {
+async fn handler(ws: &mut MutexGuard<'_, WebSocketStream<MaybeTlsStream<TcpStream>>>, body_bytes: Vec<u8>, timeout: u64) -> Result<Response, StatusCode> {
     // send request to server
     let request_message = Message::Binary(body_bytes);
     if let Err(err) = ws.send(request_message).await {
@@ -105,7 +105,7 @@ async fn handler(ws: &mut MutexGuard<'_, WebSocketStream<MaybeTlsStream<TcpStrea
                 }
             }
         }
-        _ = tokio::time::sleep(Duration::from_millis(1000)) => {
+        _ = tokio::time::sleep(Duration::from_millis(timeout)) => {
             tracing::warn!("Websocket server timeout");
             Err(StatusCode::GATEWAY_TIMEOUT)
         }

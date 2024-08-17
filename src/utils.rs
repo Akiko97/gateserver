@@ -37,16 +37,14 @@ MMMMMMMMMMM
     "#);
     tracing::info!("Author: {}", env!("CARGO_PKG_AUTHORS"));
     tracing::info!("Current version: {}", env!("CARGO_PKG_VERSION"));
-    if let Ok(rust_log) = std::env::var("RUST_LOG") {
-        tracing::info!("RUST_LOG is set to: {}", rust_log);
-    } else {
-        tracing::info!("RUST_LOG is not set, use default `info`");
-    }
     tracing::info!("File log is {}", if SERVER_CONFIG.server.file_log {
         "enabled"
     } else {
         "disabled"
     });
+    if let Ok(rust_log) = std::env::var("RUST_LOG") {
+        tracing::warn!("RUST_LOG is set to `{}`, but gateserver will not use it. Please use the config file to set the log level.", rust_log);
+    }
 }
 
 pub fn init_tracing() {
@@ -70,12 +68,12 @@ pub fn init_tracing() {
         tracing_subscriber::registry()
             .with(console_log)
             .with(file_log)
-            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {EnvFilter::from("info")}))
+            .with(EnvFilter::try_from(SERVER_CONFIG.server.log_level.as_str()).unwrap_or_else(|_| {EnvFilter::from("info")}))
             .init();
     } else {
         tracing_subscriber::registry()
             .with(console_log)
-            .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {EnvFilter::from("info")}))
+            .with(EnvFilter::try_from(SERVER_CONFIG.server.log_level.as_str()).unwrap_or_else(|_| {EnvFilter::from("info")}))
             .init();
     }
     tokio::spawn(async {

@@ -2,7 +2,8 @@
   "server": {
     "host": "localhost",
     "port": 8888,
-    "file_log": true
+    "file_log": true,
+    "log_level": "info"
   },
   "web": {
     "path": "/",
@@ -11,14 +12,17 @@
   },
   "websocket_proxy": {
     "path": "/ws",
-    "forward_to": "ws://127.0.0.1:8000/ws"
+    "forward_to": "ws://127.0.0.1:8000/ws",
+    "timeout": 1000
   },
   "tcp_proxy": {
     "path": "/tcp",
-    "forward_to": "127.0.0.1:8080"
+    "forward_to": "127.0.0.1:8080",
+    "timeout": 1000
   },
   "reverse_proxy": {
     "path": "/proxy",
-    "forward_to": "http://localhost:5173"
+    "forward_to": "http://localhost:5173",
+    "timeout": 1000
   }
 }
