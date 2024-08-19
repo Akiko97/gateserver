@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use axum::{
     Router,
     routing::get,
@@ -12,7 +13,7 @@ use crate::{
     config::SERVER_CONFIG
 };
 
-pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
+pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
     if let Some(config) = &SERVER_CONFIG.reverse_proxy {
         let path = config.path.as_str();
         let get_file_path = if path.ends_with("/") {
@@ -48,7 +49,7 @@ fn insert_base_tag(contents: &mut String, base_href: &str) {
 }
 
 async fn forward_to(
-    State(context): State<ServerContext>,
+    State(context): State<Arc<ServerContext>>,
     mut req: Request,
 ) -> Result<Response, StatusCode> {
     if let Some(config) = &SERVER_CONFIG.reverse_proxy {
@@ -67,7 +68,7 @@ async fn forward_to(
 
         // get response
         let mut response = context
-            .reverse_proxy.unwrap()
+            .reverse_proxy.as_ref().unwrap()
             .request(req)
             .await
             .map_err(|_| StatusCode::BAD_REQUEST)?;

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use axum::{
     http::{StatusCode, Uri},
     response::IntoResponse,
@@ -9,7 +10,7 @@ use crate::ServerContext;
 
 const NOT_FOUND: &str = include_str!("./not_found.html");
 
-pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
+pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
     router.fallback(handle_default)
 }
 

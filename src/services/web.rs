@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::sync::Arc;
 use axum::{
     Router,
     routing::get,
@@ -15,7 +16,7 @@ use crate::{
     config::SERVER_CONFIG
 };
 
-pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
+pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
     if let Some(config) = &SERVER_CONFIG.web {
         let path = config.path.as_str();
         let get_file_path = if path.ends_with("/") {
@@ -44,7 +45,7 @@ fn is_virtual_route(path: &str) -> bool {
 }
 
 async fn get_file(
-    State(_): State<ServerContext>,
+    State(_): State<Arc<ServerContext>>,
     uri: Uri,
 ) -> Result<Response, StatusCode> {
     let (web_path, dist_path, spa_support) = if let Some(config) = &SERVER_CONFIG.web {

@@ -14,8 +14,11 @@ use tokio_tungstenite::{connect_async, WebSocketStream, MaybeTlsStream};
 use tracing_subscriber::{
     EnvFilter,
     layer::SubscriberExt,
-    util::SubscriberInitExt
+    util::SubscriberInitExt,
+    fmt::MakeWriter
 };
+use rustyline_async::SharedWriter;
+use tracing_appender::non_blocking::WorkerGuard;
 use crate::config::{ProxyConfig, SERVER_CONFIG};
 
 pub fn banner() {
@@ -35,6 +38,9 @@ M. .MMM'  M 88.  ... 88       88 .88'  88.  ... 88
 Mb.     .dM `88888P' dP       8888P'   `88888P' dP
 MMMMMMMMMMM
     "#);
+}
+
+pub fn info() {
     tracing::info!("Author: {}", env!("CARGO_PKG_AUTHORS"));
     tracing::info!("Current version: {}", env!("CARGO_PKG_VERSION"));
     tracing::info!("File log is {}", if SERVER_CONFIG.server.file_log {
@@ -47,7 +53,22 @@ MMMMMMMMMMM
     }
 }
 
-pub fn init_tracing() {
+struct GateServerWriter {
+    out: Option<SharedWriter>,
+}
+
+impl<'a> MakeWriter<'a> for GateServerWriter {
+    type Writer = Box<dyn std::io::Write>;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        match &self.out {
+            None => Box::new(std::io::stdout()),
+            Some(out) => Box::new(out.clone()),
+        }
+    }
+}
+
+pub fn init_tracing(out: Option<SharedWriter>) -> WorkerGuard {
     #[cfg(target_os = "windows")]
     ansi_term::enable_ansi_support().unwrap();
 
@@ -55,7 +76,7 @@ pub fn init_tracing() {
     let file_appender = tracing_appender::rolling::daily("logs", "server.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
     let console_log = tracing_subscriber::fmt::layer()
-        .with_writer(std::io::stdout)
+        .with_writer(GateServerWriter { out })
         .with_target(false)
         .with_thread_names(true);
     let file_log = tracing_subscriber::fmt::layer()
@@ -76,16 +97,7 @@ pub fn init_tracing() {
             .with(EnvFilter::try_from(SERVER_CONFIG.server.log_level.as_str()).unwrap_or_else(|_| {EnvFilter::from("info")}))
             .init();
     }
-    tokio::spawn(async {
-        if let Err(err) = tokio::signal::ctrl_c().await {
-            tracing::error!("Failed to listen for Ctrl+C, log files maybe incomplete: {}", err);
-            return;
-        }
-        tracing::info!("Received Ctrl+C, shutting down...");
-        drop(guard);
-        tracing::info!("All logs should be flushed now.");
-        std::process::exit(0);
-    });
+    guard
 }
 
 pub async fn get_body_from_request(mut req: Request) -> Result<Vec<u8>, StatusCode> {
@@ -177,4 +189,18 @@ pub fn debug_print_bytes(bytes: &Vec<u8>, source: &str) {
             source,
             bytes.len());
     }
+}
+
+pub fn wait_file_log_guard(guard: WorkerGuard) {
+    tracing::warn!("Fail to create Readline, console log with std::io::Stdout...");
+    tokio::spawn(async {
+        if let Err(err) = tokio::signal::ctrl_c().await {
+            tracing::error!("Failed to listen for Ctrl+C, log files maybe incomplete: {}", err);
+            return;
+        }
+        tracing::info!("Received Ctrl+C, shutting down...");
+        drop(guard);
+        tracing::info!("All logs should be flushed now.");
+        std::process::exit(0);
+    });
 }

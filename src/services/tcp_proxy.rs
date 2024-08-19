@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use axum::{
     Router,
     routing::post,
@@ -18,7 +19,7 @@ use crate::{
 };
 use crate::utils::{get_body_from_request, debug_print_bytes, create_tcp_stream};
 
-pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
+pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
     if let Some(config) = &SERVER_CONFIG.tcp_proxy {
         let path = config.path.as_str();
 
@@ -31,10 +32,10 @@ pub fn setup_routes(router: Router<ServerContext>) -> Router<ServerContext> {
 }
 
 async fn forward_to(
-    State(context): State<ServerContext>,
+    State(context): State<Arc<ServerContext>>,
     req: Request,
 ) -> Result<Response, StatusCode> {
-    if let (Some(config), Some(tcp)) = (&SERVER_CONFIG.tcp_proxy, context.tcp_proxy) {
+    if let (Some(config), Some(tcp)) = (&SERVER_CONFIG.tcp_proxy, &context.tcp_proxy) {
         let body_bytes = get_body_from_request(req).await?;
         debug_print_bytes(&body_bytes, "HTTP");
         let mut tcp = tcp.lock().await;
