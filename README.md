@@ -45,6 +45,40 @@ forward_to = "http://localhost:5173" # The backend HTTP server to which the requ
 timeout = 1000 # Useless now.
 ```
 
+## Commands
+
+GateServer supports the following commands:
+
+* `config timeout [websocket_proxy|tcp_proxy] [timeout]`
+
+**Set the Service Timeout**:
+
+Use this command to set the timeout for either the WebSocket or TCP proxy service. Replace `[websocket_proxy|tcp_proxy]` with the desired service, and `[timeout]` with the timeout value in milliseconds.
+
+---
+
+* `config save`
+
+**Save the Current Configuration**:
+
+This command saves the current configuration to a file. No additional arguments are required.
+
+---
+
+* `config show`
+
+**Show the Current Configuration**:
+
+Use this command to display the current configuration settings. No additional arguments are required.
+
+---
+
+* `net reconnect [websocket_proxy|tcp_proxy]`
+
+**Reconnect Service**:
+
+This command allows you to reconnect the specified service. Replace `[websocket_proxy|tcp_proxy]` with the desired service to reconnect.
+
 ## Installation
 
 ### Prerequisites
