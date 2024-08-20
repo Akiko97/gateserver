@@ -1,15 +1,17 @@
 mod server_config;
 
 use lazy_static::lazy_static;
+use std::sync::RwLock;
 pub use server_config::ServerConfig;
 pub use server_config::ProxyConfig;
 
 const DEFAULT_CONFIG: &str = include_str!("./server.json");
+pub const CONFIG_FILE: &str = "server_config.toml";
 
 lazy_static! {
-    pub static ref SERVER_CONFIG: ServerConfig = {
+    pub static ref SERVER_CONFIG: RwLock<ServerConfig> = {
         let default = serde_json::from_str(DEFAULT_CONFIG).unwrap();
-        load_or_create_config("server.toml", default)
+        RwLock::new(load_or_create_config(CONFIG_FILE, default))
     };
 }
 

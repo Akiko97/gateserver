@@ -30,6 +30,22 @@ pub struct ServerContext {
 // #[tokio::main(flavor = "multi_thread", worker_threads = 16)]
 #[tokio::main]
 async fn main() -> Result<()> {
+    // init config
+    config::init_config();
+    let (ws_proxy_config, tcp_proxy_config, reverse_proxy_config, port) = {
+        let config = match SERVER_CONFIG.read() {
+            Ok(config) => config,
+            Err(poison_error) => {
+                return Err(anyhow!("Failed to read server config: {poison_error}"));
+            }
+        };
+        (
+            config.websocket_proxy.clone(),
+            config.tcp_proxy.clone(),
+            config.reverse_proxy.clone(),
+            config.server.port,
+        )
+    };
     // show banner
     utils::banner();
     // init tracing and command manager
@@ -44,20 +60,18 @@ async fn main() -> Result<()> {
     }
     // show info
     utils::info();
-    // init config
-    config::init_config();
     // start tracing span
     let span = tracing::span!(Level::DEBUG, "main");
     let _ = span.enter();
 
     // init server context
-    let ws_proxy = if let Some(config) = &SERVER_CONFIG.websocket_proxy {
-        utils::make_websocket_stream(config).await
+    let ws_proxy = if let Some(config) = ws_proxy_config {
+        utils::make_websocket_stream(&config).await
     } else { None };
-    let tcp_proxy = if let Some(config) = &SERVER_CONFIG.tcp_proxy {
-        utils::make_tcp_stream(config).await
+    let tcp_proxy = if let Some(config) = tcp_proxy_config {
+        utils::make_tcp_stream(&config).await
     } else { None };
-    let reverse_proxy = if let Some(_) = &SERVER_CONFIG.reverse_proxy {
+    let reverse_proxy = if reverse_proxy_config.is_some() {
         let client: HttpClient = hyper_util::client::legacy::Client::<(), ()>::builder(TokioExecutor::new())
                 .build(HttpConnector::new());
         Some(client)
@@ -75,7 +89,7 @@ async fn main() -> Result<()> {
     let app = app.with_state(state);
 
     // init server
-    let addr = format!("0.0.0.0:{}", SERVER_CONFIG.server.port);
+    let addr = format!("0.0.0.0:{}", port);
     let server = match TcpListener::bind(&addr).await {
         Ok(server) => server,
         Err(err) => {
@@ -104,7 +118,7 @@ fn create_router(context: Arc<ServerContext>) -> Router<Arc<ServerContext>> {
         router = services::reverse_proxy::setup_routes(router);
     }
     router = services::api::setup_routes(router);
-    if SERVER_CONFIG.web.is_some() {
+    if SERVER_CONFIG.read().unwrap().web.is_some() {
         router = services::web::setup_routes(router);
     }
     services::default::setup_routes(router)

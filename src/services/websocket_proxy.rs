@@ -21,7 +21,7 @@ use crate::{
 use crate::utils::{get_body_from_request, debug_print_bytes, create_websocket_stream};
 
 pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
-    if let Some(config) = &SERVER_CONFIG.websocket_proxy {
+    if let Some(config) = &SERVER_CONFIG.read().unwrap().websocket_proxy {
         let path = config.path.as_str();
 
         tracing::info!("Setting up route for Websocket proxy service");
@@ -36,7 +36,11 @@ async fn forward_to(
     State(context): State<Arc<ServerContext>>,
     req: Request,
 ) -> Result<Response, StatusCode> {
-    if let (Some(config), Some(ws)) = (&SERVER_CONFIG.websocket_proxy, &context.ws_proxy) {
+    let config = {
+        let guard = SERVER_CONFIG.read().unwrap();
+        guard.websocket_proxy.clone()
+    };
+    if let (Some(config), Some(ws)) = (config, &context.ws_proxy) {
         let body_bytes = get_body_from_request(req).await?;
         debug_print_bytes(&body_bytes, "HTTP");
         let mut ws = ws.lock().await;

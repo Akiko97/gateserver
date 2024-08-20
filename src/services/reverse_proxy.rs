@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
-    if let Some(config) = &SERVER_CONFIG.reverse_proxy {
+    if let Some(config) = &SERVER_CONFIG.read().unwrap().reverse_proxy {
         let path = config.path.as_str();
         let get_file_path = if path.ends_with("/") {
             format!("{path}*path")
@@ -52,7 +52,11 @@ async fn forward_to(
     State(context): State<Arc<ServerContext>>,
     mut req: Request,
 ) -> Result<Response, StatusCode> {
-    if let Some(config) = &SERVER_CONFIG.reverse_proxy {
+    let config = {
+        let guard = SERVER_CONFIG.read().unwrap();
+        guard.reverse_proxy.clone()
+    };
+    if let Some(config) = config {
         // modify req uri
         let path = req.uri().path();
         let path_query = req

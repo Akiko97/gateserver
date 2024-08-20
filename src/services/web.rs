@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
-    if let Some(config) = &SERVER_CONFIG.web {
+    if let Some(config) = &SERVER_CONFIG.read().unwrap().web {
         let path = config.path.as_str();
         let get_file_path = if path.ends_with("/") {
             format!("{path}")
@@ -48,9 +48,10 @@ async fn get_file(
     State(_): State<Arc<ServerContext>>,
     uri: Uri,
 ) -> Result<Response, StatusCode> {
-    let (web_path, dist_path, spa_support) = if let Some(config) = &SERVER_CONFIG.web {
-        (config.path.as_str(), config.dist_path.as_str(), config.spa_support)
-    } else { ("", "", false) };
+    let (web_path, dist_path, spa_support) = if let Some(config) = &SERVER_CONFIG.read().unwrap().web {
+        (config.path.clone(), config.dist_path.clone(), config.spa_support)
+    } else { ("".to_string(), "".to_string(), false) };
+    let (web_path, dist_path) = (web_path.as_str(), dist_path.as_str());
     let path = uri.path()
         .trim_start_matches(web_path)
         .trim_start_matches("/")

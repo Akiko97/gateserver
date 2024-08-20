@@ -43,7 +43,7 @@ MMMMMMMMMMM
 pub fn info() {
     tracing::info!("Author: {}", env!("CARGO_PKG_AUTHORS"));
     tracing::info!("Current version: {}", env!("CARGO_PKG_VERSION"));
-    tracing::info!("File log is {}", if SERVER_CONFIG.server.file_log {
+    tracing::info!("File log is {}", if SERVER_CONFIG.read().unwrap().server.file_log {
         "enabled"
     } else {
         "disabled"
@@ -85,16 +85,16 @@ pub fn init_tracing(out: Option<SharedWriter>) -> WorkerGuard {
         .with_target(true)
         .with_thread_names(true)
         .with_file(true);
-    if SERVER_CONFIG.server.file_log {
+    if SERVER_CONFIG.read().unwrap().server.file_log {
         tracing_subscriber::registry()
             .with(console_log)
             .with(file_log)
-            .with(EnvFilter::try_from(SERVER_CONFIG.server.log_level.as_str()).unwrap_or_else(|_| {EnvFilter::from("info")}))
+            .with(EnvFilter::try_from(SERVER_CONFIG.read().unwrap().server.log_level.as_str()).unwrap_or_else(|_| {EnvFilter::from("info")}))
             .init();
     } else {
         tracing_subscriber::registry()
             .with(console_log)
-            .with(EnvFilter::try_from(SERVER_CONFIG.server.log_level.as_str()).unwrap_or_else(|_| {EnvFilter::from("info")}))
+            .with(EnvFilter::try_from(SERVER_CONFIG.read().unwrap().server.log_level.as_str()).unwrap_or_else(|_| {EnvFilter::from("info")}))
             .init();
     }
     guard

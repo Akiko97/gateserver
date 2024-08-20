@@ -1,5 +1,5 @@
 /target
-server.toml
+server_config.toml
 /dist
 .DS_Store
 logs/

@@ -20,7 +20,7 @@ macro_rules! commands {
             }
 
             let (Some(category), Some(action)) = (input.get(0), input.get(1)) else {
-                return String::new();
+                return String::from("Unrecognized command, enter `help` to view supported commands");
             };
 
             let args = &input[2..];
@@ -31,8 +31,7 @@ macro_rules! commands {
                     }
                 )*,
                 _ => {
-                    ::tracing::info!("unknown command");
-                    return Self::help_message();
+                    return String::from("Unrecognized command, enter `help` to view supported commands");
                 }
             } {
                 Ok(s) => s,
@@ -93,8 +92,9 @@ impl CommandManager {
     }
 
     commands! {
-        config::timeout "" "";
-        config::save "" "";
-        net::reconnect "" "";
+        config::timeout "[websocket_proxy|tcp_proxy] [timeout]" "Set the service timeout";
+        config::save "" "Save the current configuration to file";
+        config::show "" "Show the current configuration";
+        net::reconnect "[websocket_proxy|tcp_proxy]" "Reconnect service";
     }
 }
