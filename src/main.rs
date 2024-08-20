@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
         reverse_proxy,
     });
     // using server context also in command manager
-    command_mgr.set_context(state.clone());
+    command_mgr.set_context(state.clone()).await;
 
     // init app
     let app = create_router(state.clone());
