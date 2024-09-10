@@ -5,7 +5,8 @@ use axum::{
     routing::get,
     response::Response,
     http::{StatusCode, Uri},
-    extract::State
+    extract::State,
+    body::Body
 };
 use tokio::{
     fs::File,
@@ -15,6 +16,8 @@ use crate::{
     ServerContext,
     config::SERVER_CONFIG
 };
+
+const NOT_FOUND: &str = include_str!("./not_found.html");
 
 pub fn setup_routes(router: Router<Arc<ServerContext>>) -> Router<Arc<ServerContext>> {
     if let Some(config) = &SERVER_CONFIG.read().unwrap().web {
@@ -68,8 +71,12 @@ async fn get_file(
         _ if is_virtual_route(path_str) && spa_support => serve_file_by_path(format!("{dist_path}/index.html").as_str()).await,
         // 404
         _ => {
-            tracing::error!("Not found file {}", file_path);
-            Err(StatusCode::NOT_FOUND)
+            let message = format!("Not found file {}", file_path);
+            tracing::error!(message);
+            Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from(NOT_FOUND.replace("%MESSAGE%", message.as_str())))
+                .unwrap())
         },
     }
 }
